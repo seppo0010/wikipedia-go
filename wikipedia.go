@@ -4,6 +4,9 @@ import "net/http"
 import "net/url"
 import "fmt"
 import "encoding/json"
+import "strings"
+
+const LANGUAGE_URL_MARKER = "{language}"
 
 type Wikipedia struct {
 	preLanguageUrl, postLanguageUrl, language      string
@@ -27,12 +30,24 @@ func NewWikipedia() *Wikipedia {
 	}
 }
 
-func (w *Wikipedia) baseUrl() string {
+func (w *Wikipedia) GetBaseUrl() string {
 	return fmt.Sprintf("%s%s%s", w.preLanguageUrl, w.language, w.postLanguageUrl)
 }
 
+func (w *Wikipedia) SetBaseUrl(baseUrl string) {
+	index := strings.Index(baseUrl, LANGUAGE_URL_MARKER)
+	if index == -1 {
+		w.preLanguageUrl = baseUrl
+		w.language = ""
+		w.postLanguageUrl = ""
+	} else {
+		w.preLanguageUrl = baseUrl[0:index]
+		w.postLanguageUrl = baseUrl[index+len(LANGUAGE_URL_MARKER):]
+	}
+}
+
 func (w *Wikipedia) query(q map[string][]string, v interface{}) error {
-	resp, err := http.Get(fmt.Sprintf("%s?%s", w.baseUrl(), url.Values(q).Encode()))
+	resp, err := http.Get(fmt.Sprintf("%s?%s", w.GetBaseUrl(), url.Values(q).Encode()))
 	if err != nil {
 		return err
 	}
