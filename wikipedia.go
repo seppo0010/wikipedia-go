@@ -1,4 +1,4 @@
-package main
+package wikipedia
 
 import "net/http"
 import "net/url"
@@ -82,10 +82,4 @@ func (w *Wikipedia) GetLanguages() (languages []Language, err error) {
 		}
 	}
 	return
-}
-
-func main() {
-	w := NewWikipedia()
-	languages, _ := w.GetLanguages()
-	fmt.Printf("%+v\n", languages)
 }
