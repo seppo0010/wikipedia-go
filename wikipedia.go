@@ -53,8 +53,7 @@ func (w *Wikipedia) query(q map[string][]string, v interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	dec := json.NewDecoder(resp.Body)
-	return dec.Decode(&v)
+	return json.NewDecoder(resp.Body).Decode(&v)
 }
 
 func (w *Wikipedia) PreLanguageUrl() string {
