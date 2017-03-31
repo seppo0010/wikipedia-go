@@ -2,7 +2,6 @@ package main
 
 import "net/http"
 import "net/url"
-import "io/ioutil"
 import "fmt"
 import "encoding/json"
 
@@ -38,12 +37,9 @@ func (w *Wikipedia) query(q map[string][]string, v interface{}) error {
 		return err
 	}
 	defer resp.Body.Close()
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	json.Unmarshal(data, &v)
-	return nil
+
+	dec := json.NewDecoder(resp.Body)
+	return dec.Decode(&v)
 }
 
 func (w *Wikipedia) PreLanguageUrl() string {
