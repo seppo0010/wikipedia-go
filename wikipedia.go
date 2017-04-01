@@ -57,6 +57,28 @@ func (w *Wikipedia) query(q map[string][]string, v interface{}) error {
 	return json.NewDecoder(resp.Body).Decode(&v)
 }
 
+func (w *Wikipedia) results(v interface{}, field string) (results []string, err error) {
+	gotResults := false
+	if r, ok := v.(map[string]interface{}); ok {
+		if query, ok := r["query"].(map[string]interface{}); ok {
+			if values, ok := query[field].([]interface{}); ok {
+				gotResults = true
+				for _, l := range values {
+					if lang, ok := l.(map[string]interface{}); ok {
+						if title, ok := lang["title"].(string); ok {
+							results = append(results, title)
+						}
+					}
+				}
+			}
+		}
+	}
+	if gotResults == false {
+		err = errors.New("Invalid JSON response")
+	}
+	return
+}
+
 func (w *Wikipedia) PreLanguageUrl() string {
 	return w.preLanguageUrl
 }
@@ -104,5 +126,22 @@ func (w *Wikipedia) GetLanguages() (languages []Language, err error) {
 	if gotLangs == false {
 		err = errors.New("Invalid JSON response")
 	}
+	return
+}
+
+func (w *Wikipedia) Search(query string) (results []string, err error) {
+	var f interface{}
+	err = w.query(map[string][]string{
+		"list":     []string{"search"},
+		"srpop":    []string{""},
+		"srlimit":  []string{fmt.Sprintf("%d", w.searchResults)},
+		"srsearch": []string{query},
+		"format":   []string{"json"},
+		"action":   []string{"query"},
+	}, &f)
+	if err != nil {
+		return
+	}
+	results, err = w.results(f, "search")
 	return
 }
