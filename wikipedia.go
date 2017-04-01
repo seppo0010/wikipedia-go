@@ -145,3 +145,32 @@ func (w *Wikipedia) Search(query string) (results []string, err error) {
 	results, err = w.results(f, "search")
 	return
 }
+
+func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (results []string, err error) {
+	if latitude < -90.0 || latitude > 90.0 {
+		err = errors.New("Invalid latitude")
+		return
+	}
+	if longitude < -180.0 || longitude > 180.0 {
+		err = errors.New("Invalid longitude")
+		return
+	}
+	if radius < -10 || radius > 10000 {
+		err = errors.New("Invalid radius")
+		return
+	}
+	var f interface{}
+	err = w.query(map[string][]string{
+		"list":     []string{"geosearch"},
+		"gsradius": []string{fmt.Sprintf("%d", radius)},
+		"gscoord":  []string{fmt.Sprintf("%f|%f", latitude, longitude)},
+		"gslimit":  []string{fmt.Sprintf("%d", w.searchResults)},
+		"format":   []string{"json"},
+		"action":   []string{"query"},
+	}, &f)
+	if err != nil {
+		return
+	}
+	results, err = w.results(f, "geosearch")
+	return
+}

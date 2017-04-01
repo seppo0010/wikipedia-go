@@ -62,3 +62,16 @@ func TestSearch(t *testing.T) {
 		return
 	}
 }
+
+func TestGeosearch(t *testing.T) {
+	w := NewWikipedia()
+	results, err := w.Geosearch(-34.603333, -58.381667, 10)
+	if err != nil {
+		t.Error("Got error")
+		return
+	}
+	if contains(results, "Buenos Aires") == false {
+		t.Error("Expected results to contain Buenos Aires")
+		return
+	}
+}
