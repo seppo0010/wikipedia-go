@@ -2,6 +2,7 @@ package wikipedia
 
 import "net/http"
 import "net/url"
+import "errors"
 import "fmt"
 import "encoding/json"
 import "strings"
@@ -80,9 +81,14 @@ func (w *Wikipedia) GetLanguages() (languages []Language, err error) {
 		"format": []string{"json"},
 		"action": []string{"query"},
 	}, &f)
+	if err != nil {
+		return
+	}
+	gotLangs := false
 	if r, ok := f.(map[string]interface{}); ok {
 		if query, ok := r["query"].(map[string]interface{}); ok {
 			if langs, ok := query["languages"].([]interface{}); ok {
+				gotLangs = true
 				for _, l := range langs {
 					if lang, ok := l.(map[string]interface{}); ok {
 						if code, ok := lang["code"].(string); ok {
@@ -94,6 +100,9 @@ func (w *Wikipedia) GetLanguages() (languages []Language, err error) {
 				}
 			}
 		}
+	}
+	if gotLangs == false {
+		err = errors.New("Invalid JSON response")
 	}
 	return
 }
