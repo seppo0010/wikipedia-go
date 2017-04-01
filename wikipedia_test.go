@@ -75,3 +75,29 @@ func TestGeosearch(t *testing.T) {
 		return
 	}
 }
+
+func TestRandom(t *testing.T) {
+	w := NewWikipedia()
+	title, err := w.Random()
+	if err != nil {
+		t.Error("Got error")
+		return
+	}
+	if title == "" {
+		t.Error("Got no title")
+		return
+	}
+}
+
+func TestRandomCount(t *testing.T) {
+	w := NewWikipedia()
+	list, err := w.RandomCount(3)
+	if err != nil {
+		t.Error("Got error")
+		return
+	}
+	if len(list) != 3 {
+		t.Error("Got wrong number of titles")
+		return
+	}
+}

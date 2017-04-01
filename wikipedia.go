@@ -174,3 +174,30 @@ func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (
 	results, err = w.results(f, "geosearch")
 	return
 }
+
+func (w *Wikipedia) RandomCount(count uint) (results []string, err error) {
+	var f interface{}
+	err = w.query(map[string][]string{
+		"list":        []string{"random"},
+		"rnnamespace": []string{"0"},
+		"rnlimit":     []string{fmt.Sprintf("%d", count)},
+		"format":      []string{"json"},
+		"action":      []string{"query"},
+	}, &f)
+	if err != nil {
+		return
+	}
+	results, err = w.results(f, "random")
+	return
+}
+
+func (w *Wikipedia) Random() (string, error) {
+	results, err := w.RandomCount(1)
+	if err != nil {
+		return "", err
+	}
+	if len(results) == 0 {
+		return "", errors.New("Got no results")
+	}
+	return results[0], nil
+}
