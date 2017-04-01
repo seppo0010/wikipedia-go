@@ -63,6 +63,24 @@ func TestSearch(t *testing.T) {
 	}
 }
 
+func TestGeosearchValidation(t *testing.T) {
+	w := NewWikipedia()
+	_, err := w.Geosearch(-2000, 0, 100)
+	if err == nil {
+		t.Error("Expected error")
+		return
+	}
+	if err.Type != ParameterError {
+		t.Error("Expected error type to be ParameterError")
+		return
+	}
+	errString := err.Error()
+	if errString != "parameter error: invalid latitude" {
+		t.Error("Expected error type to be ParameterError")
+		return
+	}
+}
+
 func TestGeosearch(t *testing.T) {
 	w := NewWikipedia()
 	results, err := w.Geosearch(-34.603333, -58.381667, 10)

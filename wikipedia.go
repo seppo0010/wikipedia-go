@@ -15,6 +15,31 @@ type Wikipedia struct {
 	searchResults                                  int
 }
 
+const (
+	ParameterError = iota
+	ResponseError  = iota
+)
+
+type WikipediaError struct {
+	Type int
+	Err  error
+}
+
+func newError(t int, e error) *WikipediaError {
+	return &WikipediaError{Type: t, Err: e}
+}
+
+func (e *WikipediaError) Error() string {
+	switch e.Type {
+	case ParameterError:
+		return fmt.Sprintf("parameter error: %s", e.Err.Error())
+	case ResponseError:
+		return fmt.Sprintf("response error: %s", e.Err.Error())
+	default:
+		return fmt.Sprintf("unknown error: %s", e.Err.Error())
+	}
+}
+
 type Language struct {
 	code, name string
 }
@@ -47,17 +72,21 @@ func (w *Wikipedia) SetBaseUrl(baseUrl string) {
 	}
 }
 
-func (w *Wikipedia) query(q map[string][]string, v interface{}) error {
+func (w *Wikipedia) query(q map[string][]string, v interface{}) *WikipediaError {
 	resp, err := http.Get(fmt.Sprintf("%s?%s", w.GetBaseUrl(), url.Values(q).Encode()))
 	if err != nil {
-		return err
+		return newError(ResponseError, err)
 	}
 	defer resp.Body.Close()
 
-	return json.NewDecoder(resp.Body).Decode(&v)
+	err = json.NewDecoder(resp.Body).Decode(&v)
+	if err != nil {
+		return newError(ResponseError, err)
+	}
+	return nil
 }
 
-func (w *Wikipedia) results(v interface{}, field string) (results []string, err error) {
+func (w *Wikipedia) results(v interface{}, field string) (results []string, err *WikipediaError) {
 	gotResults := false
 	if r, ok := v.(map[string]interface{}); ok {
 		if query, ok := r["query"].(map[string]interface{}); ok {
@@ -74,7 +103,7 @@ func (w *Wikipedia) results(v interface{}, field string) (results []string, err 
 		}
 	}
 	if gotResults == false {
-		err = errors.New("Invalid JSON response")
+		err = newError(ResponseError, errors.New("invalid json response"))
 	}
 	return
 }
@@ -95,7 +124,7 @@ func (w *Wikipedia) SearchResults() int {
 	return w.searchResults
 }
 
-func (w *Wikipedia) GetLanguages() (languages []Language, err error) {
+func (w *Wikipedia) GetLanguages() (languages []Language, err *WikipediaError) {
 	var f interface{}
 	err = w.query(map[string][]string{
 		"meta":   []string{"siteinfo"},
@@ -124,12 +153,12 @@ func (w *Wikipedia) GetLanguages() (languages []Language, err error) {
 		}
 	}
 	if gotLangs == false {
-		err = errors.New("Invalid JSON response")
+		err = newError(ResponseError, errors.New("invalid json response"))
 	}
 	return
 }
 
-func (w *Wikipedia) Search(query string) (results []string, err error) {
+func (w *Wikipedia) Search(query string) (results []string, err *WikipediaError) {
 	var f interface{}
 	err = w.query(map[string][]string{
 		"list":     []string{"search"},
@@ -146,17 +175,17 @@ func (w *Wikipedia) Search(query string) (results []string, err error) {
 	return
 }
 
-func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (results []string, err error) {
+func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (results []string, err *WikipediaError) {
 	if latitude < -90.0 || latitude > 90.0 {
-		err = errors.New("Invalid latitude")
+		err = newError(ParameterError, errors.New("invalid latitude"))
 		return
 	}
 	if longitude < -180.0 || longitude > 180.0 {
-		err = errors.New("Invalid longitude")
+		err = newError(ParameterError, errors.New("invalid longitude"))
 		return
 	}
 	if radius < -10 || radius > 10000 {
-		err = errors.New("Invalid radius")
+		err = newError(ParameterError, errors.New("invalid radius"))
 		return
 	}
 	var f interface{}
@@ -175,7 +204,7 @@ func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (
 	return
 }
 
-func (w *Wikipedia) RandomCount(count uint) (results []string, err error) {
+func (w *Wikipedia) RandomCount(count uint) (results []string, err *WikipediaError) {
 	var f interface{}
 	err = w.query(map[string][]string{
 		"list":        []string{"random"},
@@ -191,13 +220,13 @@ func (w *Wikipedia) RandomCount(count uint) (results []string, err error) {
 	return
 }
 
-func (w *Wikipedia) Random() (string, error) {
+func (w *Wikipedia) Random() (string, *WikipediaError) {
 	results, err := w.RandomCount(1)
 	if err != nil {
 		return "", err
 	}
 	if len(results) == 0 {
-		return "", errors.New("Got no results")
+		return "", newError(ResponseError, errors.New("Got no results"))
 	}
 	return results[0], nil
 }
