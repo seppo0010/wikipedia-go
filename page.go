@@ -48,7 +48,7 @@ func (page *Page) redirect(r interface{}) (title string, redirect bool) {
 	return
 }
 
-func (page *Page) GetPageId() (pageId string, err *WikipediaError) {
+func (page *Page) Id() (pageId string, err *WikipediaError) {
 	if page.id != "" {
 		pageId = page.id
 		return
@@ -68,7 +68,7 @@ func (page *Page) GetPageId() (pageId string, err *WikipediaError) {
 		return
 	}
 	if title, redirect := page.redirect(f); redirect {
-		pageId, err = NewPage(page.wikipedia, title).GetPageId()
+		pageId, err = NewPage(page.wikipedia, title).Id()
 		return
 	}
 	if v, ok := f.(map[string]interface{}); ok {
@@ -87,7 +87,7 @@ func (page *Page) GetPageId() (pageId string, err *WikipediaError) {
 	return
 }
 
-func (page *Page) GetPageTitle() (pageTitle string, err *WikipediaError) {
+func (page *Page) Title() (pageTitle string, err *WikipediaError) {
 	if page.title != "" {
 		pageTitle = page.title
 		return
@@ -107,18 +107,18 @@ func (page *Page) GetPageTitle() (pageTitle string, err *WikipediaError) {
 		return
 	}
 	if title, redirect := page.redirect(f); redirect {
-		pageTitle, err = NewPage(page.wikipedia, title).GetPageTitle()
+		pageTitle, err = NewPage(page.wikipedia, title).Title()
 		return
 	}
 	if v, ok := f.(map[string]interface{}); ok {
 		if query, ok := v["query"].(map[string]interface{}); ok {
 			if pages, ok := query["pages"].(map[string]interface{}); ok {
 				for _, page := range pages {
-                    if pageObject, ok := page.(map[string]interface{}); ok {
-                        if pageTitle, ok = pageObject["title"].(string); ok {
-					break
-                        }
-                    }
+					if pageObject, ok := page.(map[string]interface{}); ok {
+						if pageTitle, ok = pageObject["title"].(string); ok {
+							break
+						}
+					}
 				}
 			}
 		}

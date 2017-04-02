@@ -4,7 +4,7 @@ import "fmt"
 import "testing"
 
 func testPageId(t *testing.T, page *Page, id string) {
-	pageId, err := page.GetPageId()
+	pageId, err := page.Id()
 	if err != nil {
 		t.Error(fmt.Sprintf("error getting page id %s", err))
 		return
@@ -34,7 +34,7 @@ func TestPageIdPageId(t *testing.T) {
 }
 
 func testPageTitle(t *testing.T, page *Page, title string) {
-	pageTitle, err := page.GetPageTitle()
+	pageTitle, err := page.Title()
 	if err != nil {
 		t.Error(fmt.Sprintf("error getting page title %s", err))
 		return
