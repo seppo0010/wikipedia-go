@@ -12,6 +12,7 @@ func contains(s []string, e string) bool {
 }
 
 func TestGetLanguages(t *testing.T) {
+	t.Parallel()
 	w := NewWikipedia()
 	languages, err := w.GetLanguages()
 	if err != nil {
@@ -31,6 +32,7 @@ func TestGetLanguages(t *testing.T) {
 }
 
 func TestBaseUrlLanguage(t *testing.T) {
+	t.Parallel()
 	w := NewWikipedia()
 	w.SetBaseUrl("http://wikipedia.com/{language}/test")
 	url := w.GetBaseUrl()
@@ -41,6 +43,7 @@ func TestBaseUrlLanguage(t *testing.T) {
 }
 
 func TestBaseUrlNoLanguage(t *testing.T) {
+	t.Parallel()
 	w := NewWikipedia()
 	w.SetBaseUrl("http://wikipedia.com/test")
 	url := w.GetBaseUrl()
@@ -51,6 +54,7 @@ func TestBaseUrlNoLanguage(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
+	t.Parallel()
 	w := NewWikipedia()
 	results, err := w.Search("hello world")
 	if err != nil {
@@ -64,6 +68,7 @@ func TestSearch(t *testing.T) {
 }
 
 func TestGeosearchValidation(t *testing.T) {
+	t.Parallel()
 	w := NewWikipedia()
 	_, err := w.Geosearch(-2000, 0, 100)
 	if err == nil {
@@ -82,6 +87,7 @@ func TestGeosearchValidation(t *testing.T) {
 }
 
 func TestGeosearch(t *testing.T) {
+	t.Parallel()
 	w := NewWikipedia()
 	results, err := w.Geosearch(-34.603333, -58.381667, 10)
 	if err != nil {
@@ -95,6 +101,7 @@ func TestGeosearch(t *testing.T) {
 }
 
 func TestRandom(t *testing.T) {
+	t.Parallel()
 	w := NewWikipedia()
 	title, err := w.Random()
 	if err != nil {
@@ -108,6 +115,7 @@ func TestRandom(t *testing.T) {
 }
 
 func TestRandomCount(t *testing.T) {
+	t.Parallel()
 	w := NewWikipedia()
 	list, err := w.RandomCount(3)
 	if err != nil {
