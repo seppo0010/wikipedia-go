@@ -32,3 +32,27 @@ func TestPageIdPageId(t *testing.T) {
 	w := NewWikipedia()
 	testPageId(t, NewPageFromId(w, "4138548"), "4138548")
 }
+
+func testPageTitle(t *testing.T, page *Page, title string) {
+	pageTitle, err := page.GetPageTitle()
+	if err != nil {
+		t.Error(fmt.Sprintf("error getting page title %s", err))
+		return
+	}
+	if pageTitle != title {
+		t.Error(fmt.Sprintf("Invalid page title (expected %s, got %s)", title, pageTitle))
+		return
+	}
+}
+
+func TestPageTitle(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	testPageTitle(t, NewPageFromId(w, "4138548"), "Law of triviality")
+}
+
+func TestPageTitleFromTitle(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	testPageTitle(t, NewPage(w, "Law of triviality"), "Law of triviality")
+}

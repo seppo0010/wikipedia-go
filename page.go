@@ -86,3 +86,45 @@ func (page *Page) GetPageId() (pageId string, err *WikipediaError) {
 	}
 	return
 }
+
+func (page *Page) GetPageTitle() (pageTitle string, err *WikipediaError) {
+	if page.title != "" {
+		pageTitle = page.title
+		return
+	}
+	k, v := page.queryParam()
+	var f interface{}
+	err = page.wikipedia.query(map[string][]string{
+		"prop":      []string{"info|pageprops"},
+		"inprop":    []string{"url"},
+		"ppprop":    []string{"disambiguation"},
+		"redirects": []string{""},
+		"format":    []string{"json"},
+		"action":    []string{"query"},
+		k:           []string{v},
+	}, &f)
+	if err != nil {
+		return
+	}
+	if title, redirect := page.redirect(f); redirect {
+		pageTitle, err = NewPage(page.wikipedia, title).GetPageTitle()
+		return
+	}
+	if v, ok := f.(map[string]interface{}); ok {
+		if query, ok := v["query"].(map[string]interface{}); ok {
+			if pages, ok := query["pages"].(map[string]interface{}); ok {
+				for _, page := range pages {
+                    if pageObject, ok := page.(map[string]interface{}); ok {
+                        if pageTitle, ok = pageObject["title"].(string); ok {
+					break
+                        }
+                    }
+				}
+			}
+		}
+	}
+	if pageTitle == "" {
+		err = newError(ResponseError, errors.New("invalid json response"))
+	}
+	return
+}
