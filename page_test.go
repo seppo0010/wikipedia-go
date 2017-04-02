@@ -87,3 +87,29 @@ func TestHtmlContent(t *testing.T) {
 		return
 	}
 }
+
+func TestSummary(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	page := NewPageFromId(w, "4138548")
+	summary, err := page.Summary()
+	if err != nil {
+		t.Error(fmt.Sprintf("error getting page summary %s", err))
+		return
+	}
+	if strings.Contains(summary, "bike-shedding") == false {
+		t.Error("expected summary to contain bike-shedding")
+		return
+	}
+
+	content, err := page.Content()
+	if err != nil {
+		t.Error(fmt.Sprintf("error getting page content %s", err))
+		return
+	}
+
+	if len(summary) >= len(content) {
+		t.Error("summary is at least as long as content, expected shorter")
+		return
+	}
+}

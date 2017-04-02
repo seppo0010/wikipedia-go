@@ -214,3 +214,33 @@ func (page *Page) HtmlContent() (content string, err *WikipediaError) {
 	}
 	return
 }
+
+func (page *Page) Summary() (summary string, err *WikipediaError) {
+	k, v := page.queryParam()
+	var f interface{}
+	err = page.wikipedia.query(map[string][]string{
+		"prop":        []string{"extracts"},
+		"explaintext": []string{""},
+		"exintro":     []string{""},
+		"redirects":   []string{""},
+		"format":      []string{"json"},
+		"action":      []string{"query"},
+		k:             []string{v},
+	}, &f)
+	if err != nil {
+		return
+	}
+	if title, redirect := page.redirect(f); redirect {
+		summary, err = NewPage(page.wikipedia, title).Summary()
+		return
+	}
+	if v, ok := getFirstPage(f); ok {
+		if extract, ok := v["extract"].(string); ok {
+			summary = extract
+		}
+	}
+	if summary == "" {
+		err = newError(ResponseError, errors.New("invalid json response"))
+	}
+	return
+}
