@@ -72,3 +72,18 @@ func TestContent(t *testing.T) {
 		return
 	}
 }
+
+func TestHtmlContent(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	page := NewPageFromId(w, "4138548")
+	content, err := page.HtmlContent()
+	if err != nil {
+		t.Error(fmt.Sprintf("error getting page html content %s", err))
+		return
+	}
+	if strings.Contains(content, "bike-shedding") == false {
+		t.Error("expected content to contain bike-shedding")
+		return
+	}
+}

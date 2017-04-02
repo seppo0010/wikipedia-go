@@ -175,3 +175,42 @@ func (page *Page) Content() (content string, err *WikipediaError) {
 	}
 	return
 }
+
+func (page *Page) HtmlContent() (content string, err *WikipediaError) {
+	k, v := page.queryParam()
+	var f interface{}
+	err = page.wikipedia.query(map[string][]string{
+		"prop":        []string{"revisions"},
+		"explaintext": []string{""},
+		"rvprop":      []string{"content"},
+		"rvlimit":     []string{"1"},
+		"rvparse":     []string{""},
+		"redirects":   []string{""},
+		"format":      []string{"json"},
+		"action":      []string{"query"},
+		k:             []string{v},
+	}, &f)
+	if err != nil {
+		return
+	}
+	if title, redirect := page.redirect(f); redirect {
+		content, err = NewPage(page.wikipedia, title).HtmlContent()
+		return
+	}
+	if v, ok := getFirstPage(f); ok {
+		if revisions, ok := v["revisions"].([]interface{}); ok {
+			for _, revisionInterface := range revisions {
+				if revision, ok := revisionInterface.(map[string]interface{}); ok {
+					if html, ok := revision["*"].(string); ok {
+						content = html
+						break
+					}
+				}
+			}
+		}
+	}
+	if content == "" {
+		err = newError(ResponseError, errors.New("invalid json response"))
+	}
+	return
+}
