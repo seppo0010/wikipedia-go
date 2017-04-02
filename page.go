@@ -128,3 +128,50 @@ func (page *Page) Title() (pageTitle string, err *WikipediaError) {
 	}
 	return
 }
+
+func getFirstPage(f interface{}) (value map[string]interface{}, found bool) {
+	if v, ok := f.(map[string]interface{}); ok {
+		if query, ok := v["query"].(map[string]interface{}); ok {
+			if pages, ok := query["pages"].(map[string]interface{}); ok {
+				for _, page := range pages {
+					if val, ok := page.(map[string]interface{}); ok {
+						value = val
+						found = true
+						break
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
+func (page *Page) Content() (content string, err *WikipediaError) {
+	k, v := page.queryParam()
+	var f interface{}
+	err = page.wikipedia.query(map[string][]string{
+		"prop":        []string{"extracts|revisions"},
+		"explaintext": []string{""},
+		"rvprop":      []string{"ids"},
+		"redirects":   []string{""},
+		"format":      []string{"json"},
+		"action":      []string{"query"},
+		k:             []string{v},
+	}, &f)
+	if err != nil {
+		return
+	}
+	if title, redirect := page.redirect(f); redirect {
+		content, err = NewPage(page.wikipedia, title).Content()
+		return
+	}
+	if v, ok := getFirstPage(f); ok {
+		if extract, ok := v["extract"].(string); ok {
+			content = extract
+		}
+	}
+	if content == "" {
+		err = newError(ResponseError, errors.New("invalid json response"))
+	}
+	return
+}

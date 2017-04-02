@@ -1,6 +1,7 @@
 package wikipedia
 
 import "fmt"
+import "strings"
 import "testing"
 
 func testPageId(t *testing.T, page *Page, id string) {
@@ -55,4 +56,19 @@ func TestPageTitleFromTitle(t *testing.T) {
 	t.Parallel()
 	w := NewWikipedia()
 	testPageTitle(t, NewPage(w, "Law of triviality"), "Law of triviality")
+}
+
+func TestContent(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	page := NewPageFromId(w, "4138548")
+	content, err := page.Content()
+	if err != nil {
+		t.Error(fmt.Sprintf("error getting page content %s", err))
+		return
+	}
+	if strings.Contains(content, "bike-shedding") == false {
+		t.Error("expected content to contain bike-shedding")
+		return
+	}
 }
