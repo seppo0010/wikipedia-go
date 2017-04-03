@@ -113,3 +113,40 @@ func TestSummary(t *testing.T) {
 		return
 	}
 }
+
+func TestImages(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	w.SetImagesResults("5")
+	page := NewPage(w, "Argentina")
+	c := 0
+	imageSet := make(map[string]bool)
+	for imageRequest := range page.Images() {
+		if imageRequest.Err != nil {
+			t.Error(fmt.Sprintf("error getting page images %s", imageRequest.Err))
+			return
+		}
+		image := imageRequest.Image
+		if len(image.Title) == 0 {
+			t.Error("got image with no title")
+			return
+		}
+		if len(image.Url) == 0 {
+			t.Error("got image with no url")
+			return
+		}
+		if len(image.DescriptionUrl) == 0 {
+			t.Error("got image with no description url")
+			return
+		}
+		imageSet[image.Title] = true
+		c++
+		if c == 11 {
+			break
+		}
+	}
+	if c != 11 || len(imageSet) != 11 {
+		t.Error("got less than 11 different images")
+		return
+	}
+}

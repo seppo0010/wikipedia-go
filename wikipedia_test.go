@@ -75,7 +75,9 @@ func TestGeosearchValidation(t *testing.T) {
 		t.Error("Expected error")
 		return
 	}
-	if err.Type != ParameterError {
+	err2, ok := err.(*WikipediaError)
+
+	if ok == false || err2.Type != ParameterError {
 		t.Error("Expected error type to be ParameterError")
 		return
 	}

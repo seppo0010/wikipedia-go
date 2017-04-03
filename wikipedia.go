@@ -72,7 +72,11 @@ func (w *Wikipedia) SetBaseUrl(baseUrl string) {
 	}
 }
 
-func (w *Wikipedia) query(q map[string][]string, v interface{}) *WikipediaError {
+func (w *Wikipedia) SetImagesResults(imagesResults string) {
+	w.imagesResults = imagesResults
+}
+
+func (w *Wikipedia) query(q map[string][]string, v interface{}) error {
 	resp, err := http.Get(fmt.Sprintf("%s?%s", w.GetBaseUrl(), url.Values(q).Encode()))
 	if err != nil {
 		return newError(ResponseError, err)
@@ -86,7 +90,7 @@ func (w *Wikipedia) query(q map[string][]string, v interface{}) *WikipediaError 
 	return nil
 }
 
-func (w *Wikipedia) results(v interface{}, field string) (results []string, err *WikipediaError) {
+func (w *Wikipedia) results(v interface{}, field string) (results []string, err error) {
 	gotResults := false
 	if r, ok := v.(map[string]interface{}); ok {
 		if query, ok := r["query"].(map[string]interface{}); ok {
@@ -124,7 +128,7 @@ func (w *Wikipedia) SearchResults() int {
 	return w.searchResults
 }
 
-func (w *Wikipedia) GetLanguages() (languages []Language, err *WikipediaError) {
+func (w *Wikipedia) GetLanguages() (languages []Language, err error) {
 	var f interface{}
 	err = w.query(map[string][]string{
 		"meta":   []string{"siteinfo"},
@@ -158,7 +162,7 @@ func (w *Wikipedia) GetLanguages() (languages []Language, err *WikipediaError) {
 	return
 }
 
-func (w *Wikipedia) Search(query string) (results []string, err *WikipediaError) {
+func (w *Wikipedia) Search(query string) (results []string, err error) {
 	var f interface{}
 	err = w.query(map[string][]string{
 		"list":     []string{"search"},
@@ -175,7 +179,7 @@ func (w *Wikipedia) Search(query string) (results []string, err *WikipediaError)
 	return
 }
 
-func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (results []string, err *WikipediaError) {
+func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (results []string, err error) {
 	if latitude < -90.0 || latitude > 90.0 {
 		err = newError(ParameterError, errors.New("invalid latitude"))
 		return
@@ -204,7 +208,7 @@ func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (
 	return
 }
 
-func (w *Wikipedia) RandomCount(count uint) (results []string, err *WikipediaError) {
+func (w *Wikipedia) RandomCount(count uint) (results []string, err error) {
 	var f interface{}
 	err = w.query(map[string][]string{
 		"list":        []string{"random"},
@@ -220,7 +224,7 @@ func (w *Wikipedia) RandomCount(count uint) (results []string, err *WikipediaErr
 	return
 }
 
-func (w *Wikipedia) Random() (string, *WikipediaError) {
+func (w *Wikipedia) Random() (string, error) {
 	results, err := w.RandomCount(1)
 	if err != nil {
 		return "", err
