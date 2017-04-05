@@ -628,3 +628,38 @@ func (page *Page) Categories() <-chan CategoryRequest {
 	}()
 	return ch
 }
+
+func (page *Page) Sections() (titles []string, err error) {
+	id, err := page.Id()
+	if err != nil {
+		return
+	}
+	var f interface{}
+	err = page.wikipedia.query(map[string][]string{
+		"prop":   []string{"sections"},
+		"format": []string{"json"},
+		"action": []string{"parse"},
+		"pageid": []string{id},
+	}, &f)
+	if err != nil {
+		return
+	}
+
+	if v, ok := f.(map[string]interface{}); ok {
+		if parse, ok := v["parse"].(map[string]interface{}); ok {
+			if sections, ok := parse["sections"].([]interface{}); ok {
+				for _, section := range sections {
+					if v, ok := section.(map[string]interface{}); ok {
+						if line, ok := v["line"].(string); ok {
+							titles = append(titles, line)
+						}
+					}
+				}
+			}
+		}
+	}
+	if len(titles) == 0 {
+		err = newError(ResponseError, errors.New("invalid json response"))
+	}
+	return
+}

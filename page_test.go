@@ -249,3 +249,47 @@ func TestCategories(t *testing.T) {
 		return
 	}
 }
+
+func TestSections(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	page := NewPage(w, "Bikeshedding")
+	sections, err := page.Sections()
+	if err != nil {
+		t.Error("error getting sections")
+		return
+	}
+	if len(sections) != 7 {
+		t.Error("invalid number of sections")
+		return
+	}
+	if sections[0] != "Argument" {
+		t.Error("invalid section 0")
+		return
+	}
+	if sections[1] != "Examples" {
+		t.Error("invalid section 1")
+		return
+	}
+	if sections[2] != "Related principles and formulations" {
+		t.Error("invalid section 2")
+		return
+	}
+	if sections[3] != "See also" {
+		t.Error("invalid section 3")
+		return
+	}
+	if sections[4] != "References" {
+		t.Error("invalid section 4")
+		return
+	}
+	if sections[5] != "Further reading" {
+		t.Error("invalid section 5")
+		return
+	}
+	if sections[6] != "External links" {
+		t.Error("invalid section 6")
+		return
+	}
+
+}
