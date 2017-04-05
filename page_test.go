@@ -293,3 +293,18 @@ func TestSections(t *testing.T) {
 	}
 
 }
+
+func TestSectionContent(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	page := NewPageFromId(w, "4138548")
+	content, err := page.SectionContent("Examples")
+	if err != nil {
+		t.Error("failed to get section content")
+		return
+	}
+	if strings.Contains(content, "finance committee meeting") == false {
+		t.Error("expected to find substring")
+		return
+	}
+}

@@ -2,6 +2,7 @@ package wikipedia
 
 import "errors"
 import "fmt"
+import "strings"
 
 type Page struct {
 	wikipedia *Wikipedia
@@ -661,5 +662,28 @@ func (page *Page) Sections() (titles []string, err error) {
 	if len(titles) == 0 {
 		err = newError(ResponseError, errors.New("invalid json response"))
 	}
+	return
+}
+
+func (page *Page) SectionContent(title string) (sectionContent string, err error) {
+	content, err := page.Content()
+	if err != nil {
+		return
+	}
+	headr := fmt.Sprintf("== %s ==", title)
+	index := strings.Index(content, headr)
+	if index == -1 {
+		sectionContent = ""
+		return
+	}
+	index += len(headr)
+	end := strings.Index(content[index:], "==")
+	if end == -1 {
+		end = len(content)
+	} else {
+		end += index
+	}
+	fmt.Printf("%d:%d\n", index, end)
+	sectionContent = content[index:end]
 	return
 }
