@@ -220,3 +220,32 @@ func TestLinks(t *testing.T) {
 		return
 	}
 }
+
+func TestCategories(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	w.SetCategoriesResults("2")
+	page := NewPage(w, "Argentina")
+	c := 0
+	categorySet := make(map[string]bool)
+	for categoryRequest := range page.Categories() {
+		if categoryRequest.Err != nil {
+			t.Error(fmt.Sprintf("error getting page categories %s", categoryRequest.Err))
+			return
+		}
+		category := categoryRequest.Category
+		if len(category.Name) == 0 {
+			t.Error("got category with no name")
+			return
+		}
+		categorySet[category.Name] = true
+		c++
+		if c == 5 {
+			break
+		}
+	}
+	if c != 5 || len(categorySet) != 5 {
+		t.Error("got less than 5 different categories")
+		return
+	}
+}

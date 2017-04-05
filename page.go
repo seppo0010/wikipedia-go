@@ -50,6 +50,20 @@ type LinkRequest struct {
 	Err  error
 }
 
+type Category struct {
+	Name string
+}
+
+type CategoriesRequest struct {
+	categories []Category
+	cont       map[string][]string
+}
+
+type CategoryRequest struct {
+	Category Category
+	Err      error
+}
+
 func NewPage(wikipedia *Wikipedia, title string) *Page {
 	return &Page{
 		title:     title,
@@ -534,6 +548,79 @@ func (page *Page) Links() <-chan LinkRequest {
 				ch <- LinkRequest{Link: link}
 			}
 			cont = linksRequest.cont
+			if len(cont) == 0 {
+				break
+			}
+		}
+	}()
+	return ch
+}
+
+func (page *Page) requestCategories(params map[string][]string) (categoriesRequest CategoriesRequest, err error) {
+	k, v := page.queryParam()
+	var f interface{}
+	if len(params) == 0 {
+		params["continue"] = []string{""}
+	}
+	for k, v := range map[string][]string{
+		"prop":    []string{"categories"},
+		"cllimit": []string{page.wikipedia.categoriesResults},
+		"format":  []string{"json"},
+		"action":  []string{"query"},
+		k:         []string{v},
+	} {
+		params[k] = v
+	}
+	err = page.wikipedia.query(params, &f)
+	if err != nil {
+		return
+	}
+	categoriesRequest.cont, err = parseCont(f)
+	if err != nil {
+		return
+	}
+
+	if v, ok := f.(map[string]interface{}); ok {
+		if query, ok := v["query"].(map[string]interface{}); ok {
+			if pages, ok := query["pages"].(map[string]interface{}); ok {
+				for _, page := range pages {
+					if v, ok := page.(map[string]interface{}); ok {
+						if categories, ok := v["categories"].([]interface{}); ok {
+							for _, elI := range categories {
+								if el, ok := elI.(map[string]interface{}); ok {
+									if name, ok := el["title"].(string); ok {
+										categoriesRequest.categories = append(categoriesRequest.categories, Category{Name: name})
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if len(categoriesRequest.categories) == 0 {
+		err = newError(ResponseError, errors.New("invalid json response"))
+	}
+	return
+
+}
+
+func (page *Page) Categories() <-chan CategoryRequest {
+	ch := make(chan CategoryRequest)
+	go func() {
+		defer close(ch)
+		cont := make(map[string][]string)
+		for {
+			categoriesRequest, err := page.requestCategories(cont)
+			if err != nil {
+				ch <- CategoryRequest{Err: err}
+				return
+			}
+			for _, category := range categoriesRequest.categories {
+				ch <- CategoryRequest{Category: category}
+			}
+			cont = categoriesRequest.cont
 			if len(cont) == 0 {
 				break
 			}
