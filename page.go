@@ -22,6 +22,20 @@ type ImageRequest struct {
 	Err   error
 }
 
+type Reference struct {
+	Url string
+}
+
+type ReferencesRequest struct {
+	references []Reference
+	cont       map[string][]string
+}
+
+type ReferenceRequest struct {
+	Reference Reference
+	Err       error
+}
+
 func NewPage(wikipedia *Wikipedia, title string) *Page {
 	return &Page{
 		title:     title,
@@ -341,6 +355,9 @@ func (page *Page) requestImages(params map[string][]string) (imagesRequest Image
 			}
 		}
 	}
+	if len(imagesRequest.images) == 0 {
+		err = newError(ResponseError, errors.New("invalid json response"))
+	}
 	return
 
 }
@@ -360,6 +377,76 @@ func (page *Page) Images() <-chan ImageRequest {
 				ch <- ImageRequest{Image: image}
 			}
 			cont = imagesRequest.cont
+		}
+	}()
+	return ch
+}
+
+func (page *Page) requestExtlinks(params map[string][]string) (referencesRequest ReferencesRequest, err error) {
+	k, v := page.queryParam()
+	var f interface{}
+	if len(params) == 0 {
+		params["continue"] = []string{""}
+	}
+	for k, v := range map[string][]string{
+		"prop":    []string{"extlinks"},
+		"ellimit": []string{page.wikipedia.linksResults},
+		"format":  []string{"json"},
+		"action":  []string{"query"},
+		k:         []string{v},
+	} {
+		params[k] = v
+	}
+	err = page.wikipedia.query(params, &f)
+	if err != nil {
+		return
+	}
+	referencesRequest.cont, err = parseCont(f)
+	if err != nil {
+		return
+	}
+
+	if v, ok := f.(map[string]interface{}); ok {
+		if query, ok := v["query"].(map[string]interface{}); ok {
+			if pages, ok := query["pages"].(map[string]interface{}); ok {
+				for _, page := range pages {
+					if v, ok := page.(map[string]interface{}); ok {
+						if extlinks, ok := v["extlinks"].([]interface{}); ok {
+							for _, elI := range extlinks {
+								if el, ok := elI.(map[string]interface{}); ok {
+									if url, ok := el["*"].(string); ok {
+										referencesRequest.references = append(referencesRequest.references, Reference{Url: url})
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if len(referencesRequest.references) == 0 {
+		err = newError(ResponseError, errors.New("invalid json response"))
+	}
+	return
+
+}
+
+func (page *Page) Extlinks() <-chan ReferenceRequest {
+	ch := make(chan ReferenceRequest)
+	go func() {
+		defer close(ch)
+		cont := make(map[string][]string)
+		for {
+			referencesRequest, err := page.requestExtlinks(cont)
+			if err != nil {
+				ch <- ReferenceRequest{Err: err}
+				return
+			}
+			for _, reference := range referencesRequest.references {
+				ch <- ReferenceRequest{Reference: reference}
+			}
+			cont = referencesRequest.cont
 		}
 	}()
 	return ch

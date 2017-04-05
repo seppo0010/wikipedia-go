@@ -150,3 +150,32 @@ func TestImages(t *testing.T) {
 		return
 	}
 }
+
+func TestExtlinks(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	w.SetLinksResults("2")
+	page := NewPage(w, "Argentina")
+	c := 0
+	referenceSet := make(map[string]bool)
+	for referenceRequest := range page.Extlinks() {
+		if referenceRequest.Err != nil {
+			t.Error(fmt.Sprintf("error getting page external links %s", referenceRequest.Err))
+			return
+		}
+		reference := referenceRequest.Reference
+		if len(reference.Url) == 0 {
+			t.Error("got reference with no url")
+			return
+		}
+		referenceSet[reference.Url] = true
+		c++
+		if c == 5 {
+			break
+		}
+	}
+	if c != 5 || len(referenceSet) != 5 {
+		t.Error("got less than 5 different external links")
+		return
+	}
+}

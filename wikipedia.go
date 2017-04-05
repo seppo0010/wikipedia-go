@@ -76,6 +76,10 @@ func (w *Wikipedia) SetImagesResults(imagesResults string) {
 	w.imagesResults = imagesResults
 }
 
+func (w *Wikipedia) SetLinksResults(linksResults string) {
+	w.linksResults = linksResults
+}
+
 func (w *Wikipedia) query(q map[string][]string, v interface{}) error {
 	resp, err := http.Get(fmt.Sprintf("%s?%s", w.GetBaseUrl(), url.Values(q).Encode()))
 	if err != nil {
