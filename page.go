@@ -36,6 +36,20 @@ type ReferenceRequest struct {
 	Err       error
 }
 
+type Link struct {
+	Title string
+}
+
+type LinksRequest struct {
+	links []Link
+	cont  map[string][]string
+}
+
+type LinkRequest struct {
+	Link Link
+	Err  error
+}
+
 func NewPage(wikipedia *Wikipedia, title string) *Page {
 	return &Page{
 		title:     title,
@@ -446,6 +460,80 @@ func (page *Page) Extlinks() <-chan ReferenceRequest {
 				ch <- ReferenceRequest{Reference: reference}
 			}
 			cont = referencesRequest.cont
+			if len(cont) == 0 {
+				break
+			}
+		}
+	}()
+	return ch
+}
+
+func (page *Page) requestLinks(params map[string][]string) (linksRequest LinksRequest, err error) {
+	k, v := page.queryParam()
+	var f interface{}
+	if len(params) == 0 {
+		params["continue"] = []string{""}
+	}
+	for k, v := range map[string][]string{
+		"prop":        []string{"links"},
+		"pllimit":     []string{page.wikipedia.linksResults},
+		"plnamespace": []string{"0"},
+		"format":      []string{"json"},
+		"action":      []string{"query"},
+		k:             []string{v},
+	} {
+		params[k] = v
+	}
+	err = page.wikipedia.query(params, &f)
+	if err != nil {
+		return
+	}
+	linksRequest.cont, err = parseCont(f)
+	if err != nil {
+		return
+	}
+
+	if v, ok := f.(map[string]interface{}); ok {
+		if query, ok := v["query"].(map[string]interface{}); ok {
+			if pages, ok := query["pages"].(map[string]interface{}); ok {
+				for _, page := range pages {
+					if v, ok := page.(map[string]interface{}); ok {
+						if links, ok := v["links"].([]interface{}); ok {
+							for _, elI := range links {
+								if el, ok := elI.(map[string]interface{}); ok {
+									if title, ok := el["title"].(string); ok {
+										linksRequest.links = append(linksRequest.links, Link{Title: title})
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if len(linksRequest.links) == 0 {
+		err = newError(ResponseError, errors.New("invalid json response"))
+	}
+	return
+
+}
+
+func (page *Page) Links() <-chan LinkRequest {
+	ch := make(chan LinkRequest)
+	go func() {
+		defer close(ch)
+		cont := make(map[string][]string)
+		for {
+			linksRequest, err := page.requestLinks(cont)
+			if err != nil {
+				ch <- LinkRequest{Err: err}
+				return
+			}
+			for _, link := range linksRequest.links {
+				ch <- LinkRequest{Link: link}
+			}
+			cont = linksRequest.cont
 			if len(cont) == 0 {
 				break
 			}

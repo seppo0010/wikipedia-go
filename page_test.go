@@ -191,3 +191,32 @@ func TestExtlinks(t *testing.T) {
 		return
 	}
 }
+
+func TestLinks(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	w.SetLinksResults("2")
+	page := NewPage(w, "Argentina")
+	c := 0
+	linkSet := make(map[string]bool)
+	for linkRequest := range page.Links() {
+		if linkRequest.Err != nil {
+			t.Error(fmt.Sprintf("error getting page links %s", linkRequest.Err))
+			return
+		}
+		link := linkRequest.Link
+		if len(link.Title) == 0 {
+			t.Error("got link with no title")
+			return
+		}
+		linkSet[link.Title] = true
+		c++
+		if c == 5 {
+			break
+		}
+	}
+	if c != 5 || len(linkSet) != 5 {
+		t.Error("got less than 5 different links")
+		return
+	}
+}
