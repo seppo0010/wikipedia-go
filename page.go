@@ -301,10 +301,6 @@ func parseCont(q interface{}) (params map[string][]string, err error) {
 			}
 		}
 	}
-	if len(params) == 0 {
-		err = errors.New("invalid json response")
-		return
-	}
 	return
 }
 
@@ -377,6 +373,9 @@ func (page *Page) Images() <-chan ImageRequest {
 				ch <- ImageRequest{Image: image}
 			}
 			cont = imagesRequest.cont
+			if len(cont) == 0 {
+				break
+			}
 		}
 	}()
 	return ch
@@ -447,6 +446,9 @@ func (page *Page) Extlinks() <-chan ReferenceRequest {
 				ch <- ReferenceRequest{Reference: reference}
 			}
 			cont = referencesRequest.cont
+			if len(cont) == 0 {
+				break
+			}
 		}
 	}()
 	return ch

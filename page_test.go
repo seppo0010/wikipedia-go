@@ -114,6 +114,18 @@ func TestSummary(t *testing.T) {
 	}
 }
 
+func TestCont(t *testing.T) {
+	t.Parallel()
+	w := NewWikipedia()
+	page := NewPage(w, "Argentina")
+	for image := range page.Images() {
+		if image.Err != nil {
+			t.Error(fmt.Sprintf("error getting image: %s", image.Err))
+			return
+		}
+	}
+}
+
 func TestImages(t *testing.T) {
 	t.Parallel()
 	w := NewWikipedia()
