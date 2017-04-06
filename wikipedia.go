@@ -56,6 +56,15 @@ func NewWikipedia() *Wikipedia {
 	}
 }
 
+
+func (w *Wikipedia) Page(title string) *Page {
+	return NewPage(w, title)
+}
+
+func (w *Wikipedia) PageFromId(id string) *Page {
+	return NewPageFromId(w, id)
+}
+
 func (w *Wikipedia) GetBaseUrl() string {
 	return fmt.Sprintf("%s%s%s", w.preLanguageUrl, w.language, w.postLanguageUrl)
 }
