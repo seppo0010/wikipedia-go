@@ -683,7 +683,6 @@ func (page *Page) SectionContent(title string) (sectionContent string, err error
 	} else {
 		end += index
 	}
-	fmt.Printf("%d:%d\n", index, end)
 	sectionContent = content[index:end]
 	return
 }
