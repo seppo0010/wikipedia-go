@@ -181,10 +181,10 @@ func (w *WikipediaClient) SearchResults() int {
 func (w *WikipediaClient) GetLanguages() (languages []Language, err error) {
 	var f interface{}
 	err = query(w, map[string][]string{
-		"meta":   []string{"siteinfo"},
-		"siprop": []string{"languages"},
-		"format": []string{"json"},
-		"action": []string{"query"},
+		"meta":   {"siteinfo"},
+		"siprop": {"languages"},
+		"format": {"json"},
+		"action": {"query"},
 	}, &f)
 	if err != nil {
 		return
@@ -215,12 +215,12 @@ func (w *WikipediaClient) GetLanguages() (languages []Language, err error) {
 func (w *WikipediaClient) Search(q string) (results []string, err error) {
 	var f interface{}
 	err = query(w, map[string][]string{
-		"list":     []string{"search"},
-		"srpop":    []string{""},
-		"srlimit":  []string{fmt.Sprintf("%d", w.searchResults)},
-		"srsearch": []string{q},
-		"format":   []string{"json"},
-		"action":   []string{"query"},
+		"list":     {"search"},
+		"srpop":    {""},
+		"srlimit":  {fmt.Sprintf("%d", w.searchResults)},
+		"srsearch": {q},
+		"format":   {"json"},
+		"action":   {"query"},
 	}, &f)
 	if err != nil {
 		return
@@ -244,12 +244,12 @@ func (w *WikipediaClient) Geosearch(latitude float64, longitude float64, radius 
 	}
 	var f interface{}
 	err = query(w, map[string][]string{
-		"list":     []string{"geosearch"},
-		"gsradius": []string{fmt.Sprintf("%d", radius)},
-		"gscoord":  []string{fmt.Sprintf("%f|%f", latitude, longitude)},
-		"gslimit":  []string{fmt.Sprintf("%d", w.searchResults)},
-		"format":   []string{"json"},
-		"action":   []string{"query"},
+		"list":     {"geosearch"},
+		"gsradius": {fmt.Sprintf("%d", radius)},
+		"gscoord":  {fmt.Sprintf("%f|%f", latitude, longitude)},
+		"gslimit":  {fmt.Sprintf("%d", w.searchResults)},
+		"format":   {"json"},
+		"action":   {"query"},
 	}, &f)
 	if err != nil {
 		return
@@ -261,11 +261,11 @@ func (w *WikipediaClient) Geosearch(latitude float64, longitude float64, radius 
 func (w *WikipediaClient) RandomCount(count uint) (results []string, err error) {
 	var f interface{}
 	err = query(w, map[string][]string{
-		"list":        []string{"random"},
-		"rnnamespace": []string{"0"},
-		"rnlimit":     []string{fmt.Sprintf("%d", count)},
-		"format":      []string{"json"},
-		"action":      []string{"query"},
+		"list":        {"random"},
+		"rnnamespace": {"0"},
+		"rnlimit":     {fmt.Sprintf("%d", count)},
+		"format":      {"json"},
+		"action":      {"query"},
 	}, &f)
 	if err != nil {
 		return

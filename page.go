@@ -128,13 +128,13 @@ func (page *PageClient) Id() (pageId string, err error) {
 	k, v := page.queryParam()
 	var f interface{}
 	err = query(page.wikipedia, map[string][]string{
-		"prop":      []string{"info|pageprops"},
-		"inprop":    []string{"url"},
-		"ppprop":    []string{"disambiguation"},
-		"redirects": []string{""},
-		"format":    []string{"json"},
-		"action":    []string{"query"},
-		k:           []string{v},
+		"prop":      {"info|pageprops"},
+		"inprop":    {"url"},
+		"ppprop":    {"disambiguation"},
+		"redirects": {""},
+		"format":    {"json"},
+		"action":    {"query"},
+		k:           {v},
 	}, &f)
 	if err != nil {
 		return
@@ -146,7 +146,7 @@ func (page *PageClient) Id() (pageId string, err error) {
 	if v, ok := f.(map[string]interface{}); ok {
 		if query, ok := v["query"].(map[string]interface{}); ok {
 			if pages, ok := query["pages"].(map[string]interface{}); ok {
-				for pageString, _ := range pages {
+				for pageString := range pages {
 					pageId = pageString
 					break
 				}
@@ -167,13 +167,13 @@ func (page *PageClient) Title() (pageTitle string, err error) {
 	k, v := page.queryParam()
 	var f interface{}
 	err = query(page.wikipedia, map[string][]string{
-		"prop":      []string{"info|pageprops"},
-		"inprop":    []string{"url"},
-		"ppprop":    []string{"disambiguation"},
-		"redirects": []string{""},
-		"format":    []string{"json"},
-		"action":    []string{"query"},
-		k:           []string{v},
+		"prop":      {"info|pageprops"},
+		"inprop":    {"url"},
+		"ppprop":    {"disambiguation"},
+		"redirects": {""},
+		"format":    {"json"},
+		"action":    {"query"},
+		k:           {v},
 	}, &f)
 	if err != nil {
 		return
@@ -222,13 +222,13 @@ func (page *PageClient) Content() (content string, err error) {
 	k, v := page.queryParam()
 	var f interface{}
 	err = query(page.wikipedia, map[string][]string{
-		"prop":        []string{"extracts|revisions"},
-		"explaintext": []string{""},
-		"rvprop":      []string{"ids"},
-		"redirects":   []string{""},
-		"format":      []string{"json"},
-		"action":      []string{"query"},
-		k:             []string{v},
+		"prop":        {"extracts|revisions"},
+		"explaintext": {""},
+		"rvprop":      {"ids"},
+		"redirects":   {""},
+		"format":      {"json"},
+		"action":      {"query"},
+		k:             {v},
 	}, &f)
 	if err != nil {
 		return
@@ -252,15 +252,15 @@ func (page *PageClient) HtmlContent() (content string, err error) {
 	k, v := page.queryParam()
 	var f interface{}
 	err = query(page.wikipedia, map[string][]string{
-		"prop":        []string{"revisions"},
-		"explaintext": []string{""},
-		"rvprop":      []string{"content"},
-		"rvlimit":     []string{"1"},
-		"rvparse":     []string{""},
-		"redirects":   []string{""},
-		"format":      []string{"json"},
-		"action":      []string{"query"},
-		k:             []string{v},
+		"prop":        {"revisions"},
+		"explaintext": {""},
+		"rvprop":      {"content"},
+		"rvlimit":     {"1"},
+		"rvparse":     {""},
+		"redirects":   {""},
+		"format":      {"json"},
+		"action":      {"query"},
+		k:             {v},
 	}, &f)
 	if err != nil {
 		return
@@ -291,13 +291,13 @@ func (page *PageClient) Summary() (summary string, err error) {
 	k, v := page.queryParam()
 	var f interface{}
 	err = query(page.wikipedia, map[string][]string{
-		"prop":        []string{"extracts"},
-		"explaintext": []string{""},
-		"exintro":     []string{""},
-		"redirects":   []string{""},
-		"format":      []string{"json"},
-		"action":      []string{"query"},
-		k:             []string{v},
+		"prop":        {"extracts"},
+		"explaintext": {""},
+		"exintro":     {""},
+		"redirects":   {""},
+		"format":      {"json"},
+		"action":      {"query"},
+		k:             {v},
 	}, &f)
 	if err != nil {
 		return
@@ -354,13 +354,13 @@ func (page *PageClient) requestImages(params map[string][]string) (imagesRequest
 		params["continue"] = []string{""}
 	}
 	for k, v := range map[string][]string{
-		"generator": []string{"images"},
-		"gimlimit":  []string{page.wikipedia.ImagesResults()},
-		"prop":      []string{"imageinfo"},
-		"iiprop":    []string{"url"},
-		"format":    []string{"json"},
-		"action":    []string{"query"},
-		k:           []string{v},
+		"generator": {"images"},
+		"gimlimit":  {page.wikipedia.ImagesResults()},
+		"prop":      {"imageinfo"},
+		"iiprop":    {"url"},
+		"format":    {"json"},
+		"action":    {"query"},
+		k:           {v},
 	} {
 		params[k] = v
 	}
@@ -431,11 +431,11 @@ func (page *PageClient) requestExtlinks(params map[string][]string) (referencesR
 		params["continue"] = []string{""}
 	}
 	for k, v := range map[string][]string{
-		"prop":    []string{"extlinks"},
-		"ellimit": []string{page.wikipedia.LinksResults()},
-		"format":  []string{"json"},
-		"action":  []string{"query"},
-		k:         []string{v},
+		"prop":    {"extlinks"},
+		"ellimit": {page.wikipedia.LinksResults()},
+		"format":  {"json"},
+		"action":  {"query"},
+		k:         {v},
 	} {
 		params[k] = v
 	}
@@ -504,12 +504,12 @@ func (page *PageClient) requestLinks(params map[string][]string) (linksRequest L
 		params["continue"] = []string{""}
 	}
 	for k, v := range map[string][]string{
-		"prop":        []string{"links"},
-		"pllimit":     []string{page.wikipedia.LinksResults()},
-		"plnamespace": []string{"0"},
-		"format":      []string{"json"},
-		"action":      []string{"query"},
-		k:             []string{v},
+		"prop":        {"links"},
+		"pllimit":     {page.wikipedia.LinksResults()},
+		"plnamespace": {"0"},
+		"format":      {"json"},
+		"action":      {"query"},
+		k:             {v},
 	} {
 		params[k] = v
 	}
@@ -578,11 +578,11 @@ func (page *PageClient) requestCategories(params map[string][]string) (categorie
 		params["continue"] = []string{""}
 	}
 	for k, v := range map[string][]string{
-		"prop":    []string{"categories"},
-		"cllimit": []string{page.wikipedia.CategoriesResults()},
-		"format":  []string{"json"},
-		"action":  []string{"query"},
-		k:         []string{v},
+		"prop":    {"categories"},
+		"cllimit": {page.wikipedia.CategoriesResults()},
+		"format":  {"json"},
+		"action":  {"query"},
+		k:         {v},
 	} {
 		params[k] = v
 	}
@@ -651,10 +651,10 @@ func (page *PageClient) Sections() (titles []string, err error) {
 	}
 	var f interface{}
 	err = query(page.wikipedia, map[string][]string{
-		"prop":   []string{"sections"},
-		"format": []string{"json"},
-		"action": []string{"parse"},
-		"pageid": []string{id},
+		"prop":   {"sections"},
+		"format": {"json"},
+		"action": {"parse"},
+		"pageid": {id},
 	}, &f)
 	if err != nil {
 		return

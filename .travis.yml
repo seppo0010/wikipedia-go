@@ -6,7 +6,7 @@ go:
   - 1.7.x
 
 before_install:
-  - test "$(go fmt |wc -l)" -eq 0
+  - test "$(gofmt -l -w -s .|wc -l)" -eq 0
   - go vet
 
 notifications:
