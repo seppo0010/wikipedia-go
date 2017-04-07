@@ -4,8 +4,22 @@ import "errors"
 import "fmt"
 import "strings"
 
-type Page struct {
-	wikipedia *Wikipedia
+type Page interface {
+	Id() (pageId string, err error)
+	Title() (pageTitle string, err error)
+	Content() (content string, err error)
+	HtmlContent() (content string, err error)
+	Summary() (summary string, err error)
+	Images() <-chan ImageRequest
+	Extlinks() <-chan ReferenceRequest
+	Links() <-chan LinkRequest
+	Categories() <-chan CategoryRequest
+	Sections() (titles []string, err error)
+	SectionContent(title string) (sectionContent string, err error)
+}
+
+type PageClient struct {
+	wikipedia Wikipedia
 	title, id string
 }
 
@@ -65,20 +79,20 @@ type CategoryRequest struct {
 	Err      error
 }
 
-func NewPage(wikipedia *Wikipedia, title string) *Page {
-	return &Page{
+func NewPage(wikipedia Wikipedia, title string) *PageClient {
+	return &PageClient{
 		title:     title,
 		wikipedia: wikipedia,
 	}
 }
-func NewPageFromId(wikipedia *Wikipedia, id string) *Page {
-	return &Page{
+func NewPageFromId(wikipedia Wikipedia, id string) *PageClient {
+	return &PageClient{
 		id:        id,
 		wikipedia: wikipedia,
 	}
 }
 
-func (page *Page) queryParam() (string, string) {
+func (page *PageClient) queryParam() (string, string) {
 	if page.title != "" {
 		return "titles", page.title
 	}
@@ -88,7 +102,7 @@ func (page *Page) queryParam() (string, string) {
 	panic("Page must have a title or an id")
 }
 
-func (page *Page) redirect(r interface{}) (title string, redirect bool) {
+func (page *PageClient) redirect(r interface{}) (title string, redirect bool) {
 	if v, ok := r.(map[string]interface{}); ok {
 		if query, ok := v["query"].(map[string]interface{}); ok {
 			if redirects, ok := query["redirects"].([]interface{}); ok {
@@ -106,14 +120,14 @@ func (page *Page) redirect(r interface{}) (title string, redirect bool) {
 	return
 }
 
-func (page *Page) Id() (pageId string, err error) {
+func (page *PageClient) Id() (pageId string, err error) {
 	if page.id != "" {
 		pageId = page.id
 		return
 	}
 	k, v := page.queryParam()
 	var f interface{}
-	err = page.wikipedia.query(map[string][]string{
+	err = query(page.wikipedia, map[string][]string{
 		"prop":      []string{"info|pageprops"},
 		"inprop":    []string{"url"},
 		"ppprop":    []string{"disambiguation"},
@@ -145,14 +159,14 @@ func (page *Page) Id() (pageId string, err error) {
 	return
 }
 
-func (page *Page) Title() (pageTitle string, err error) {
+func (page *PageClient) Title() (pageTitle string, err error) {
 	if page.title != "" {
 		pageTitle = page.title
 		return
 	}
 	k, v := page.queryParam()
 	var f interface{}
-	err = page.wikipedia.query(map[string][]string{
+	err = query(page.wikipedia, map[string][]string{
 		"prop":      []string{"info|pageprops"},
 		"inprop":    []string{"url"},
 		"ppprop":    []string{"disambiguation"},
@@ -204,10 +218,10 @@ func getFirstPage(f interface{}) (value map[string]interface{}, found bool) {
 	return
 }
 
-func (page *Page) Content() (content string, err error) {
+func (page *PageClient) Content() (content string, err error) {
 	k, v := page.queryParam()
 	var f interface{}
-	err = page.wikipedia.query(map[string][]string{
+	err = query(page.wikipedia, map[string][]string{
 		"prop":        []string{"extracts|revisions"},
 		"explaintext": []string{""},
 		"rvprop":      []string{"ids"},
@@ -234,10 +248,10 @@ func (page *Page) Content() (content string, err error) {
 	return
 }
 
-func (page *Page) HtmlContent() (content string, err error) {
+func (page *PageClient) HtmlContent() (content string, err error) {
 	k, v := page.queryParam()
 	var f interface{}
-	err = page.wikipedia.query(map[string][]string{
+	err = query(page.wikipedia, map[string][]string{
 		"prop":        []string{"revisions"},
 		"explaintext": []string{""},
 		"rvprop":      []string{"content"},
@@ -273,10 +287,10 @@ func (page *Page) HtmlContent() (content string, err error) {
 	return
 }
 
-func (page *Page) Summary() (summary string, err error) {
+func (page *PageClient) Summary() (summary string, err error) {
 	k, v := page.queryParam()
 	var f interface{}
-	err = page.wikipedia.query(map[string][]string{
+	err = query(page.wikipedia, map[string][]string{
 		"prop":        []string{"extracts"},
 		"explaintext": []string{""},
 		"exintro":     []string{""},
@@ -333,7 +347,7 @@ func parseCont(q interface{}) (params map[string][]string, err error) {
 	return
 }
 
-func (page *Page) requestImages(params map[string][]string) (imagesRequest ImagesRequest, err error) {
+func (page *PageClient) requestImages(params map[string][]string) (imagesRequest ImagesRequest, err error) {
 	k, v := page.queryParam()
 	var f interface{}
 	if len(params) == 0 {
@@ -341,7 +355,7 @@ func (page *Page) requestImages(params map[string][]string) (imagesRequest Image
 	}
 	for k, v := range map[string][]string{
 		"generator": []string{"images"},
-		"gimlimit":  []string{page.wikipedia.imagesResults},
+		"gimlimit":  []string{page.wikipedia.ImagesResults()},
 		"prop":      []string{"imageinfo"},
 		"iiprop":    []string{"url"},
 		"format":    []string{"json"},
@@ -350,7 +364,7 @@ func (page *Page) requestImages(params map[string][]string) (imagesRequest Image
 	} {
 		params[k] = v
 	}
-	err = page.wikipedia.query(params, &f)
+	err = query(page.wikipedia, params, &f)
 	if err != nil {
 		return
 	}
@@ -387,7 +401,7 @@ func (page *Page) requestImages(params map[string][]string) (imagesRequest Image
 
 }
 
-func (page *Page) Images() <-chan ImageRequest {
+func (page *PageClient) Images() <-chan ImageRequest {
 	ch := make(chan ImageRequest)
 	go func() {
 		defer close(ch)
@@ -410,7 +424,7 @@ func (page *Page) Images() <-chan ImageRequest {
 	return ch
 }
 
-func (page *Page) requestExtlinks(params map[string][]string) (referencesRequest ReferencesRequest, err error) {
+func (page *PageClient) requestExtlinks(params map[string][]string) (referencesRequest ReferencesRequest, err error) {
 	k, v := page.queryParam()
 	var f interface{}
 	if len(params) == 0 {
@@ -418,14 +432,14 @@ func (page *Page) requestExtlinks(params map[string][]string) (referencesRequest
 	}
 	for k, v := range map[string][]string{
 		"prop":    []string{"extlinks"},
-		"ellimit": []string{page.wikipedia.linksResults},
+		"ellimit": []string{page.wikipedia.LinksResults()},
 		"format":  []string{"json"},
 		"action":  []string{"query"},
 		k:         []string{v},
 	} {
 		params[k] = v
 	}
-	err = page.wikipedia.query(params, &f)
+	err = query(page.wikipedia, params, &f)
 	if err != nil {
 		return
 	}
@@ -460,7 +474,7 @@ func (page *Page) requestExtlinks(params map[string][]string) (referencesRequest
 
 }
 
-func (page *Page) Extlinks() <-chan ReferenceRequest {
+func (page *PageClient) Extlinks() <-chan ReferenceRequest {
 	ch := make(chan ReferenceRequest)
 	go func() {
 		defer close(ch)
@@ -483,7 +497,7 @@ func (page *Page) Extlinks() <-chan ReferenceRequest {
 	return ch
 }
 
-func (page *Page) requestLinks(params map[string][]string) (linksRequest LinksRequest, err error) {
+func (page *PageClient) requestLinks(params map[string][]string) (linksRequest LinksRequest, err error) {
 	k, v := page.queryParam()
 	var f interface{}
 	if len(params) == 0 {
@@ -491,7 +505,7 @@ func (page *Page) requestLinks(params map[string][]string) (linksRequest LinksRe
 	}
 	for k, v := range map[string][]string{
 		"prop":        []string{"links"},
-		"pllimit":     []string{page.wikipedia.linksResults},
+		"pllimit":     []string{page.wikipedia.LinksResults()},
 		"plnamespace": []string{"0"},
 		"format":      []string{"json"},
 		"action":      []string{"query"},
@@ -499,7 +513,7 @@ func (page *Page) requestLinks(params map[string][]string) (linksRequest LinksRe
 	} {
 		params[k] = v
 	}
-	err = page.wikipedia.query(params, &f)
+	err = query(page.wikipedia, params, &f)
 	if err != nil {
 		return
 	}
@@ -534,7 +548,7 @@ func (page *Page) requestLinks(params map[string][]string) (linksRequest LinksRe
 
 }
 
-func (page *Page) Links() <-chan LinkRequest {
+func (page *PageClient) Links() <-chan LinkRequest {
 	ch := make(chan LinkRequest)
 	go func() {
 		defer close(ch)
@@ -557,7 +571,7 @@ func (page *Page) Links() <-chan LinkRequest {
 	return ch
 }
 
-func (page *Page) requestCategories(params map[string][]string) (categoriesRequest CategoriesRequest, err error) {
+func (page *PageClient) requestCategories(params map[string][]string) (categoriesRequest CategoriesRequest, err error) {
 	k, v := page.queryParam()
 	var f interface{}
 	if len(params) == 0 {
@@ -565,14 +579,14 @@ func (page *Page) requestCategories(params map[string][]string) (categoriesReque
 	}
 	for k, v := range map[string][]string{
 		"prop":    []string{"categories"},
-		"cllimit": []string{page.wikipedia.categoriesResults},
+		"cllimit": []string{page.wikipedia.CategoriesResults()},
 		"format":  []string{"json"},
 		"action":  []string{"query"},
 		k:         []string{v},
 	} {
 		params[k] = v
 	}
-	err = page.wikipedia.query(params, &f)
+	err = query(page.wikipedia, params, &f)
 	if err != nil {
 		return
 	}
@@ -607,7 +621,7 @@ func (page *Page) requestCategories(params map[string][]string) (categoriesReque
 
 }
 
-func (page *Page) Categories() <-chan CategoryRequest {
+func (page *PageClient) Categories() <-chan CategoryRequest {
 	ch := make(chan CategoryRequest)
 	go func() {
 		defer close(ch)
@@ -630,13 +644,13 @@ func (page *Page) Categories() <-chan CategoryRequest {
 	return ch
 }
 
-func (page *Page) Sections() (titles []string, err error) {
+func (page *PageClient) Sections() (titles []string, err error) {
 	id, err := page.Id()
 	if err != nil {
 		return
 	}
 	var f interface{}
-	err = page.wikipedia.query(map[string][]string{
+	err = query(page.wikipedia, map[string][]string{
 		"prop":   []string{"sections"},
 		"format": []string{"json"},
 		"action": []string{"parse"},
@@ -665,7 +679,7 @@ func (page *Page) Sections() (titles []string, err error) {
 	return
 }
 
-func (page *Page) SectionContent(title string) (sectionContent string, err error) {
+func (page *PageClient) SectionContent(title string) (sectionContent string, err error) {
 	content, err := page.Content()
 	if err != nil {
 		return

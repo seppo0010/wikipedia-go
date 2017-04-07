@@ -9,7 +9,29 @@ import "strings"
 
 const LANGUAGE_URL_MARKER = "{language}"
 
-type Wikipedia struct {
+type Wikipedia interface {
+	Page(title string) Page
+	PageFromId(id string) Page
+	GetBaseUrl() string
+	SetBaseUrl(baseUrl string)
+	SetImagesResults(imagesResults string)
+	SetLinksResults(linksResults string)
+	SetCategoriesResults(categoriesResults string)
+	PreLanguageUrl() string
+	PostLanguageUrl() string
+	Language() string
+	SearchResults() int
+	GetLanguages() (languages []Language, err error)
+	Search(query string) (results []string, err error)
+	Geosearch(latitude float64, longitude float64, radius int) (results []string, err error)
+	RandomCount(count uint) (results []string, err error)
+	Random() (string, error)
+	ImagesResults() string
+	LinksResults() string
+	CategoriesResults() string
+}
+
+type WikipediaClient struct {
 	preLanguageUrl, postLanguageUrl, language      string
 	imagesResults, linksResults, categoriesResults string
 	searchResults                                  int
@@ -44,8 +66,8 @@ type Language struct {
 	code, name string
 }
 
-func NewWikipedia() *Wikipedia {
-	return &Wikipedia{
+func NewWikipedia() *WikipediaClient {
+	return &WikipediaClient{
 		preLanguageUrl:    "https://",
 		postLanguageUrl:   ".wikipedia.org/w/api.php",
 		language:          "en",
@@ -56,20 +78,19 @@ func NewWikipedia() *Wikipedia {
 	}
 }
 
-
-func (w *Wikipedia) Page(title string) *Page {
+func (w *WikipediaClient) Page(title string) Page {
 	return NewPage(w, title)
 }
 
-func (w *Wikipedia) PageFromId(id string) *Page {
+func (w *WikipediaClient) PageFromId(id string) Page {
 	return NewPageFromId(w, id)
 }
 
-func (w *Wikipedia) GetBaseUrl() string {
+func (w *WikipediaClient) GetBaseUrl() string {
 	return fmt.Sprintf("%s%s%s", w.preLanguageUrl, w.language, w.postLanguageUrl)
 }
 
-func (w *Wikipedia) SetBaseUrl(baseUrl string) {
+func (w *WikipediaClient) SetBaseUrl(baseUrl string) {
 	index := strings.Index(baseUrl, LANGUAGE_URL_MARKER)
 	if index == -1 {
 		w.preLanguageUrl = baseUrl
@@ -81,19 +102,31 @@ func (w *Wikipedia) SetBaseUrl(baseUrl string) {
 	}
 }
 
-func (w *Wikipedia) SetImagesResults(imagesResults string) {
+func (w *WikipediaClient) ImagesResults() string {
+	return w.imagesResults
+}
+
+func (w *WikipediaClient) LinksResults() string {
+	return w.linksResults
+}
+
+func (w *WikipediaClient) CategoriesResults() string {
+	return w.categoriesResults
+}
+
+func (w *WikipediaClient) SetImagesResults(imagesResults string) {
 	w.imagesResults = imagesResults
 }
 
-func (w *Wikipedia) SetLinksResults(linksResults string) {
+func (w *WikipediaClient) SetLinksResults(linksResults string) {
 	w.linksResults = linksResults
 }
 
-func (w *Wikipedia) SetCategoriesResults(categoriesResults string) {
+func (w *WikipediaClient) SetCategoriesResults(categoriesResults string) {
 	w.categoriesResults = categoriesResults
 }
 
-func (w *Wikipedia) query(q map[string][]string, v interface{}) error {
+func query(w Wikipedia, q map[string][]string, v interface{}) error {
 	resp, err := http.Get(fmt.Sprintf("%s?%s", w.GetBaseUrl(), url.Values(q).Encode()))
 	if err != nil {
 		return newError(ResponseError, err)
@@ -107,7 +140,7 @@ func (w *Wikipedia) query(q map[string][]string, v interface{}) error {
 	return nil
 }
 
-func (w *Wikipedia) results(v interface{}, field string) (results []string, err error) {
+func processResults(v interface{}, field string) (results []string, err error) {
 	gotResults := false
 	if r, ok := v.(map[string]interface{}); ok {
 		if query, ok := r["query"].(map[string]interface{}); ok {
@@ -129,25 +162,25 @@ func (w *Wikipedia) results(v interface{}, field string) (results []string, err 
 	return
 }
 
-func (w *Wikipedia) PreLanguageUrl() string {
+func (w *WikipediaClient) PreLanguageUrl() string {
 	return w.preLanguageUrl
 }
 
-func (w *Wikipedia) PostLanguageUrl() string {
+func (w *WikipediaClient) PostLanguageUrl() string {
 	return w.postLanguageUrl
 }
 
-func (w *Wikipedia) Language() string {
+func (w *WikipediaClient) Language() string {
 	return w.language
 }
 
-func (w *Wikipedia) SearchResults() int {
+func (w *WikipediaClient) SearchResults() int {
 	return w.searchResults
 }
 
-func (w *Wikipedia) GetLanguages() (languages []Language, err error) {
+func (w *WikipediaClient) GetLanguages() (languages []Language, err error) {
 	var f interface{}
-	err = w.query(map[string][]string{
+	err = query(w, map[string][]string{
 		"meta":   []string{"siteinfo"},
 		"siprop": []string{"languages"},
 		"format": []string{"json"},
@@ -179,24 +212,24 @@ func (w *Wikipedia) GetLanguages() (languages []Language, err error) {
 	return
 }
 
-func (w *Wikipedia) Search(query string) (results []string, err error) {
+func (w *WikipediaClient) Search(q string) (results []string, err error) {
 	var f interface{}
-	err = w.query(map[string][]string{
+	err = query(w, map[string][]string{
 		"list":     []string{"search"},
 		"srpop":    []string{""},
 		"srlimit":  []string{fmt.Sprintf("%d", w.searchResults)},
-		"srsearch": []string{query},
+		"srsearch": []string{q},
 		"format":   []string{"json"},
 		"action":   []string{"query"},
 	}, &f)
 	if err != nil {
 		return
 	}
-	results, err = w.results(f, "search")
+	results, err = processResults(f, "search")
 	return
 }
 
-func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (results []string, err error) {
+func (w *WikipediaClient) Geosearch(latitude float64, longitude float64, radius int) (results []string, err error) {
 	if latitude < -90.0 || latitude > 90.0 {
 		err = newError(ParameterError, errors.New("invalid latitude"))
 		return
@@ -210,7 +243,7 @@ func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (
 		return
 	}
 	var f interface{}
-	err = w.query(map[string][]string{
+	err = query(w, map[string][]string{
 		"list":     []string{"geosearch"},
 		"gsradius": []string{fmt.Sprintf("%d", radius)},
 		"gscoord":  []string{fmt.Sprintf("%f|%f", latitude, longitude)},
@@ -221,13 +254,13 @@ func (w *Wikipedia) Geosearch(latitude float64, longitude float64, radius int) (
 	if err != nil {
 		return
 	}
-	results, err = w.results(f, "geosearch")
+	results, err = processResults(f, "geosearch")
 	return
 }
 
-func (w *Wikipedia) RandomCount(count uint) (results []string, err error) {
+func (w *WikipediaClient) RandomCount(count uint) (results []string, err error) {
 	var f interface{}
-	err = w.query(map[string][]string{
+	err = query(w, map[string][]string{
 		"list":        []string{"random"},
 		"rnnamespace": []string{"0"},
 		"rnlimit":     []string{fmt.Sprintf("%d", count)},
@@ -237,11 +270,11 @@ func (w *Wikipedia) RandomCount(count uint) (results []string, err error) {
 	if err != nil {
 		return
 	}
-	results, err = w.results(f, "random")
+	results, err = processResults(f, "random")
 	return
 }
 
-func (w *Wikipedia) Random() (string, error) {
+func (w *WikipediaClient) Random() (string, error) {
 	results, err := w.RandomCount(1)
 	if err != nil {
 		return "", err
