@@ -140,7 +140,8 @@ func query(w Wikipedia, q map[string][]string, v interface{}) error {
 	return nil
 }
 
-func processResults(v interface{}, field string) (results []string, err error) {
+func processResults(v interface{}, field string) ([]string, error) {
+	results := make([]string, 0)
 	gotResults := false
 	if r, ok := v.(map[string]interface{}); ok {
 		if query, ok := r["query"].(map[string]interface{}); ok {
@@ -157,9 +158,9 @@ func processResults(v interface{}, field string) (results []string, err error) {
 		}
 	}
 	if gotResults == false {
-		err = newError(ResponseError, errors.New("invalid json response"))
+		return nil, newError(ResponseError, errors.New("invalid json response"))
 	}
-	return
+	return results, nil
 }
 
 func (w *WikipediaClient) PreLanguageUrl() string {
@@ -178,18 +179,19 @@ func (w *WikipediaClient) SearchResults() int {
 	return w.searchResults
 }
 
-func (w *WikipediaClient) GetLanguages() (languages []Language, err error) {
+func (w *WikipediaClient) GetLanguages() ([]Language, error) {
 	var f interface{}
-	err = query(w, map[string][]string{
+	err := query(w, map[string][]string{
 		"meta":   {"siteinfo"},
 		"siprop": {"languages"},
 		"format": {"json"},
 		"action": {"query"},
 	}, &f)
 	if err != nil {
-		return
+		return nil, err
 	}
 	gotLangs := false
+	languages := make([]Language, 0)
 	if r, ok := f.(map[string]interface{}); ok {
 		if query, ok := r["query"].(map[string]interface{}); ok {
 			if langs, ok := query["languages"].([]interface{}); ok {
@@ -207,14 +209,14 @@ func (w *WikipediaClient) GetLanguages() (languages []Language, err error) {
 		}
 	}
 	if gotLangs == false {
-		err = newError(ResponseError, errors.New("invalid json response"))
+		return nil, newError(ResponseError, errors.New("invalid json response"))
 	}
-	return
+	return languages, nil
 }
 
-func (w *WikipediaClient) Search(q string) (results []string, err error) {
+func (w *WikipediaClient) Search(q string) ([]string, error) {
 	var f interface{}
-	err = query(w, map[string][]string{
+	err := query(w, map[string][]string{
 		"list":     {"search"},
 		"srpop":    {""},
 		"srlimit":  {fmt.Sprintf("%d", w.searchResults)},
@@ -223,27 +225,23 @@ func (w *WikipediaClient) Search(q string) (results []string, err error) {
 		"action":   {"query"},
 	}, &f)
 	if err != nil {
-		return
+		return nil, err
 	}
-	results, err = processResults(f, "search")
-	return
+	return processResults(f, "search")
 }
 
-func (w *WikipediaClient) Geosearch(latitude float64, longitude float64, radius int) (results []string, err error) {
+func (w *WikipediaClient) Geosearch(latitude float64, longitude float64, radius int) ([]string, error) {
 	if latitude < -90.0 || latitude > 90.0 {
-		err = newError(ParameterError, errors.New("invalid latitude"))
-		return
+		return nil, newError(ParameterError, errors.New("invalid latitude"))
 	}
 	if longitude < -180.0 || longitude > 180.0 {
-		err = newError(ParameterError, errors.New("invalid longitude"))
-		return
+		return nil, newError(ParameterError, errors.New("invalid longitude"))
 	}
 	if radius < -10 || radius > 10000 {
-		err = newError(ParameterError, errors.New("invalid radius"))
-		return
+		return nil, newError(ParameterError, errors.New("invalid radius"))
 	}
 	var f interface{}
-	err = query(w, map[string][]string{
+	err := query(w, map[string][]string{
 		"list":     {"geosearch"},
 		"gsradius": {fmt.Sprintf("%d", radius)},
 		"gscoord":  {fmt.Sprintf("%f|%f", latitude, longitude)},
@@ -252,15 +250,14 @@ func (w *WikipediaClient) Geosearch(latitude float64, longitude float64, radius 
 		"action":   {"query"},
 	}, &f)
 	if err != nil {
-		return
+		return nil, err
 	}
-	results, err = processResults(f, "geosearch")
-	return
+	return processResults(f, "geosearch")
 }
 
-func (w *WikipediaClient) RandomCount(count uint) (results []string, err error) {
+func (w *WikipediaClient) RandomCount(count uint) ([]string, error) {
 	var f interface{}
-	err = query(w, map[string][]string{
+	err := query(w, map[string][]string{
 		"list":        {"random"},
 		"rnnamespace": {"0"},
 		"rnlimit":     {fmt.Sprintf("%d", count)},
@@ -268,10 +265,9 @@ func (w *WikipediaClient) RandomCount(count uint) (results []string, err error) 
 		"action":      {"query"},
 	}, &f)
 	if err != nil {
-		return
+		return nil, err
 	}
-	results, err = processResults(f, "random")
-	return
+	return processResults(f, "random")
 }
 
 func (w *WikipediaClient) Random() (string, error) {

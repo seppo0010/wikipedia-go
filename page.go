@@ -120,14 +120,13 @@ func (page *PageClient) redirect(r interface{}) (title string, redirect bool) {
 	return
 }
 
-func (page *PageClient) Id() (pageId string, err error) {
+func (page *PageClient) Id() (string, error) {
 	if page.id != "" {
-		pageId = page.id
-		return
+		return page.id, nil
 	}
 	k, v := page.queryParam()
 	var f interface{}
-	err = query(page.wikipedia, map[string][]string{
+	err := query(page.wikipedia, map[string][]string{
 		"prop":      {"info|pageprops"},
 		"inprop":    {"url"},
 		"ppprop":    {"disambiguation"},
@@ -137,36 +136,30 @@ func (page *PageClient) Id() (pageId string, err error) {
 		k:           {v},
 	}, &f)
 	if err != nil {
-		return
+		return "", err
 	}
 	if title, redirect := page.redirect(f); redirect {
-		pageId, err = NewPage(page.wikipedia, title).Id()
-		return
+		return NewPage(page.wikipedia, title).Id()
 	}
 	if v, ok := f.(map[string]interface{}); ok {
 		if query, ok := v["query"].(map[string]interface{}); ok {
 			if pages, ok := query["pages"].(map[string]interface{}); ok {
 				for pageString := range pages {
-					pageId = pageString
-					break
+					return pageString, nil
 				}
 			}
 		}
 	}
-	if pageId == "" {
-		err = newError(ResponseError, errors.New("invalid json response"))
-	}
-	return
+	return "", newError(ResponseError, errors.New("invalid json response"))
 }
 
-func (page *PageClient) Title() (pageTitle string, err error) {
+func (page *PageClient) Title() (string, error) {
 	if page.title != "" {
-		pageTitle = page.title
-		return
+		return page.title, nil
 	}
 	k, v := page.queryParam()
 	var f interface{}
-	err = query(page.wikipedia, map[string][]string{
+	err := query(page.wikipedia, map[string][]string{
 		"prop":      {"info|pageprops"},
 		"inprop":    {"url"},
 		"ppprop":    {"disambiguation"},
@@ -176,52 +169,46 @@ func (page *PageClient) Title() (pageTitle string, err error) {
 		k:           {v},
 	}, &f)
 	if err != nil {
-		return
+		return "", err
 	}
 	if title, redirect := page.redirect(f); redirect {
-		pageTitle, err = NewPage(page.wikipedia, title).Title()
-		return
+		return NewPage(page.wikipedia, title).Title()
 	}
 	if v, ok := f.(map[string]interface{}); ok {
 		if query, ok := v["query"].(map[string]interface{}); ok {
 			if pages, ok := query["pages"].(map[string]interface{}); ok {
 				for _, page := range pages {
 					if pageObject, ok := page.(map[string]interface{}); ok {
-						if pageTitle, ok = pageObject["title"].(string); ok {
-							break
+						if pageTitle, ok := pageObject["title"].(string); ok {
+							return pageTitle, nil
 						}
 					}
 				}
 			}
 		}
 	}
-	if pageTitle == "" {
-		err = newError(ResponseError, errors.New("invalid json response"))
-	}
-	return
+	return "", newError(ResponseError, errors.New("invalid json response"))
 }
 
-func getFirstPage(f interface{}) (value map[string]interface{}, found bool) {
+func getFirstPage(f interface{}) (map[string]interface{}, bool) {
 	if v, ok := f.(map[string]interface{}); ok {
 		if query, ok := v["query"].(map[string]interface{}); ok {
 			if pages, ok := query["pages"].(map[string]interface{}); ok {
 				for _, page := range pages {
 					if val, ok := page.(map[string]interface{}); ok {
-						value = val
-						found = true
-						break
+						return val, true
 					}
 				}
 			}
 		}
 	}
-	return
+	return nil, false
 }
 
-func (page *PageClient) Content() (content string, err error) {
+func (page *PageClient) Content() (string, error) {
 	k, v := page.queryParam()
 	var f interface{}
-	err = query(page.wikipedia, map[string][]string{
+	err := query(page.wikipedia, map[string][]string{
 		"prop":        {"extracts|revisions"},
 		"explaintext": {""},
 		"rvprop":      {"ids"},
@@ -231,27 +218,23 @@ func (page *PageClient) Content() (content string, err error) {
 		k:             {v},
 	}, &f)
 	if err != nil {
-		return
+		return "", err
 	}
 	if title, redirect := page.redirect(f); redirect {
-		content, err = NewPage(page.wikipedia, title).Content()
-		return
+		return NewPage(page.wikipedia, title).Content()
 	}
 	if v, ok := getFirstPage(f); ok {
 		if extract, ok := v["extract"].(string); ok {
-			content = extract
+			return extract, nil
 		}
 	}
-	if content == "" {
-		err = newError(ResponseError, errors.New("invalid json response"))
-	}
-	return
+	return "", newError(ResponseError, errors.New("invalid json response"))
 }
 
-func (page *PageClient) HtmlContent() (content string, err error) {
+func (page *PageClient) HtmlContent() (string, error) {
 	k, v := page.queryParam()
 	var f interface{}
-	err = query(page.wikipedia, map[string][]string{
+	err := query(page.wikipedia, map[string][]string{
 		"prop":        {"revisions"},
 		"explaintext": {""},
 		"rvprop":      {"content"},
@@ -263,34 +246,29 @@ func (page *PageClient) HtmlContent() (content string, err error) {
 		k:             {v},
 	}, &f)
 	if err != nil {
-		return
+		return "", nil
 	}
 	if title, redirect := page.redirect(f); redirect {
-		content, err = NewPage(page.wikipedia, title).HtmlContent()
-		return
+		return NewPage(page.wikipedia, title).HtmlContent()
 	}
 	if v, ok := getFirstPage(f); ok {
 		if revisions, ok := v["revisions"].([]interface{}); ok {
 			for _, revisionInterface := range revisions {
 				if revision, ok := revisionInterface.(map[string]interface{}); ok {
 					if html, ok := revision["*"].(string); ok {
-						content = html
-						break
+						return html, nil
 					}
 				}
 			}
 		}
 	}
-	if content == "" {
-		err = newError(ResponseError, errors.New("invalid json response"))
-	}
-	return
+	return "", newError(ResponseError, errors.New("invalid json response"))
 }
 
-func (page *PageClient) Summary() (summary string, err error) {
+func (page *PageClient) Summary() (string, error) {
 	k, v := page.queryParam()
 	var f interface{}
-	err = query(page.wikipedia, map[string][]string{
+	err := query(page.wikipedia, map[string][]string{
 		"prop":        {"extracts"},
 		"explaintext": {""},
 		"exintro":     {""},
@@ -300,25 +278,21 @@ func (page *PageClient) Summary() (summary string, err error) {
 		k:             {v},
 	}, &f)
 	if err != nil {
-		return
+		return "", err
 	}
 	if title, redirect := page.redirect(f); redirect {
-		summary, err = NewPage(page.wikipedia, title).Summary()
-		return
+		return NewPage(page.wikipedia, title).Summary()
 	}
 	if v, ok := getFirstPage(f); ok {
 		if extract, ok := v["extract"].(string); ok {
-			summary = extract
+			return extract, nil
 		}
 	}
-	if summary == "" {
-		err = newError(ResponseError, errors.New("invalid json response"))
-	}
-	return
+	return "", newError(ResponseError, errors.New("invalid json response"))
 }
 
-func parseCont(q interface{}) (params map[string][]string, err error) {
-	params = make(map[string][]string)
+func parseCont(q interface{}) (map[string][]string, error) {
+	params := make(map[string][]string)
 	if q2, ok := q.(map[string]interface{}); ok {
 		if cont, ok := q2["continue"].(map[string]interface{}); ok {
 			for k, vUntyped := range cont {
@@ -338,16 +312,15 @@ func parseCont(q interface{}) (params map[string][]string, err error) {
 				case string:
 					params[k] = []string{v}
 				default:
-					err = errors.New("invalid continue parameter")
-					return
+					return nil, errors.New("invalid continue parameter")
 				}
 			}
 		}
 	}
-	return
+	return params, nil
 }
 
-func (page *PageClient) requestImages(params map[string][]string) (imagesRequest ImagesRequest, err error) {
+func (page *PageClient) requestImages(params map[string][]string) (*ImagesRequest, error) {
 	k, v := page.queryParam()
 	var f interface{}
 	if len(params) == 0 {
@@ -364,13 +337,14 @@ func (page *PageClient) requestImages(params map[string][]string) (imagesRequest
 	} {
 		params[k] = v
 	}
-	err = query(page.wikipedia, params, &f)
+	err := query(page.wikipedia, params, &f)
 	if err != nil {
-		return
+		return nil, err
 	}
+	imagesRequest := new(ImagesRequest)
 	imagesRequest.cont, err = parseCont(f)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if v, ok := f.(map[string]interface{}); ok {
 		if query, ok := v["query"].(map[string]interface{}); ok {
@@ -395,9 +369,9 @@ func (page *PageClient) requestImages(params map[string][]string) (imagesRequest
 		}
 	}
 	if len(imagesRequest.images) == 0 {
-		err = newError(ResponseError, errors.New("invalid json response"))
+		return nil, newError(ResponseError, errors.New("invalid json response"))
 	}
-	return
+	return imagesRequest, nil
 
 }
 
@@ -424,7 +398,7 @@ func (page *PageClient) Images() <-chan ImageRequest {
 	return ch
 }
 
-func (page *PageClient) requestExtlinks(params map[string][]string) (referencesRequest ReferencesRequest, err error) {
+func (page *PageClient) requestExtlinks(params map[string][]string) (*ReferencesRequest, error) {
 	k, v := page.queryParam()
 	var f interface{}
 	if len(params) == 0 {
@@ -439,13 +413,14 @@ func (page *PageClient) requestExtlinks(params map[string][]string) (referencesR
 	} {
 		params[k] = v
 	}
-	err = query(page.wikipedia, params, &f)
+	err := query(page.wikipedia, params, &f)
 	if err != nil {
-		return
+		return nil, err
 	}
+	referencesRequest := new(ReferencesRequest)
 	referencesRequest.cont, err = parseCont(f)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if v, ok := f.(map[string]interface{}); ok {
@@ -468,9 +443,9 @@ func (page *PageClient) requestExtlinks(params map[string][]string) (referencesR
 		}
 	}
 	if len(referencesRequest.references) == 0 {
-		err = newError(ResponseError, errors.New("invalid json response"))
+		return nil, newError(ResponseError, errors.New("invalid json response"))
 	}
-	return
+	return referencesRequest, nil
 
 }
 
@@ -497,7 +472,7 @@ func (page *PageClient) Extlinks() <-chan ReferenceRequest {
 	return ch
 }
 
-func (page *PageClient) requestLinks(params map[string][]string) (linksRequest LinksRequest, err error) {
+func (page *PageClient) requestLinks(params map[string][]string) (*LinksRequest, error) {
 	k, v := page.queryParam()
 	var f interface{}
 	if len(params) == 0 {
@@ -513,13 +488,14 @@ func (page *PageClient) requestLinks(params map[string][]string) (linksRequest L
 	} {
 		params[k] = v
 	}
-	err = query(page.wikipedia, params, &f)
+	err := query(page.wikipedia, params, &f)
 	if err != nil {
-		return
+		return nil, err
 	}
+	linksRequest := new(LinksRequest)
 	linksRequest.cont, err = parseCont(f)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if v, ok := f.(map[string]interface{}); ok {
@@ -542,9 +518,9 @@ func (page *PageClient) requestLinks(params map[string][]string) (linksRequest L
 		}
 	}
 	if len(linksRequest.links) == 0 {
-		err = newError(ResponseError, errors.New("invalid json response"))
+		return nil, newError(ResponseError, errors.New("invalid json response"))
 	}
-	return
+	return linksRequest, nil
 
 }
 
@@ -571,7 +547,7 @@ func (page *PageClient) Links() <-chan LinkRequest {
 	return ch
 }
 
-func (page *PageClient) requestCategories(params map[string][]string) (categoriesRequest CategoriesRequest, err error) {
+func (page *PageClient) requestCategories(params map[string][]string) (*CategoriesRequest, error) {
 	k, v := page.queryParam()
 	var f interface{}
 	if len(params) == 0 {
@@ -586,13 +562,14 @@ func (page *PageClient) requestCategories(params map[string][]string) (categorie
 	} {
 		params[k] = v
 	}
-	err = query(page.wikipedia, params, &f)
+	err := query(page.wikipedia, params, &f)
 	if err != nil {
-		return
+		return nil, err
 	}
+	categoriesRequest := new(CategoriesRequest)
 	categoriesRequest.cont, err = parseCont(f)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if v, ok := f.(map[string]interface{}); ok {
@@ -615,9 +592,9 @@ func (page *PageClient) requestCategories(params map[string][]string) (categorie
 		}
 	}
 	if len(categoriesRequest.categories) == 0 {
-		err = newError(ResponseError, errors.New("invalid json response"))
+		return nil, newError(ResponseError, errors.New("invalid json response"))
 	}
-	return
+	return categoriesRequest, nil
 
 }
 
@@ -644,10 +621,10 @@ func (page *PageClient) Categories() <-chan CategoryRequest {
 	return ch
 }
 
-func (page *PageClient) Sections() (titles []string, err error) {
+func (page *PageClient) Sections() ([]string, error) {
 	id, err := page.Id()
 	if err != nil {
-		return
+		return nil, err
 	}
 	var f interface{}
 	err = query(page.wikipedia, map[string][]string{
@@ -657,9 +634,10 @@ func (page *PageClient) Sections() (titles []string, err error) {
 		"pageid": {id},
 	}, &f)
 	if err != nil {
-		return
+		return nil, err
 	}
 
+	titles := make([]string, 0)
 	if v, ok := f.(map[string]interface{}); ok {
 		if parse, ok := v["parse"].(map[string]interface{}); ok {
 			if sections, ok := parse["sections"].([]interface{}); ok {
@@ -674,21 +652,20 @@ func (page *PageClient) Sections() (titles []string, err error) {
 		}
 	}
 	if len(titles) == 0 {
-		err = newError(ResponseError, errors.New("invalid json response"))
+		return nil, newError(ResponseError, errors.New("invalid json response"))
 	}
-	return
+	return titles, nil
 }
 
-func (page *PageClient) SectionContent(title string) (sectionContent string, err error) {
+func (page *PageClient) SectionContent(title string) (string, error) {
 	content, err := page.Content()
 	if err != nil {
-		return
+		return "", err
 	}
 	headr := fmt.Sprintf("== %s ==", title)
 	index := strings.Index(content, headr)
 	if index == -1 {
-		sectionContent = ""
-		return
+		return "", nil
 	}
 	index += len(headr)
 	end := strings.Index(content[index:], "==")
@@ -697,6 +674,5 @@ func (page *PageClient) SectionContent(title string) (sectionContent string, err
 	} else {
 		end += index
 	}
-	sectionContent = content[index:end]
-	return
+	return content[index:end], nil
 }
